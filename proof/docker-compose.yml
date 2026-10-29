@@ -1,0 +1,31 @@
+# Loopback-only Umami for the 30-second check. Stop with:
+# docker compose -f proof/docker-compose.yml down --volumes
+# Do not use Umami Cloud.
+services:
+  umami-digest-db:
+    image: postgres:15-alpine@sha256:54e0dd8e8cddcdbb9156c2486eed5a43eccb7214d7c6828097d41ce049fb3984
+    container_name: umami-digest-db
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: umami
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umami -d umami"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  umami-digest-app:
+    image: ghcr.io/umami-software/umami:3.4.1@sha256:e69d1a7932e9dab0fc523edc7be1f3a53f3c261f57856fc2167ae74a8fc022e8
+    container_name: umami-digest-app
+    environment:
+      DATABASE_URL: postgresql://umami:umami@umami-digest-db:5432/umami
+      APP_SECRET: umami-digest-proof-secret
+      DISABLE_BOT_CHECK: "1"
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      umami-digest-db:
+        condition: service_healthy
